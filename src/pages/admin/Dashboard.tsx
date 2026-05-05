@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, Users, ArrowUpRight, Plus, RefreshCw, ChevronLeft, ChevronRight, Check, X as XIcon } from 'lucide-react';
 import { format, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { Appointment, Barbershop } from '../../types';
 import { useOutletContext } from 'react-router-dom';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
 
 export default function Dashboard() {
   const { searchQuery } = useOutletContext<{ searchQuery: string }>();
@@ -15,6 +16,8 @@ export default function Dashboard() {
   const [viewedDate, setViewedDate] = useState(new Date());
 
   const [showModal, setShowModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [appToCancel, setAppToCancel] = useState<string | null>(null);
   const [newApp, setNewApp] = useState({ clientName: '', clientPhone: '', serviceId: '', barberId: '', time: '09:00' });
 
   useEffect(() => {
@@ -66,6 +69,12 @@ export default function Dashboard() {
   };
 
   const updateAppointmentStatus = async (id: string, status: string) => {
+    if (status === 'cancelled') {
+        setAppToCancel(id);
+        setShowCancelModal(true);
+        return;
+    }
+    
     try {
       await fetch(`/api/admin/appointments/${id}`, {
         method: 'PATCH',
@@ -73,6 +82,21 @@ export default function Dashboard() {
         body: JSON.stringify({ status })
       });
       fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const confirmCancel = async () => {
+    if (!appToCancel) return;
+    try {
+      await fetch(`/api/admin/appointments/${appToCancel}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+      fetchData();
+      setAppToCancel(null);
     } catch (err) {
       console.error(err);
     }
@@ -255,6 +279,18 @@ export default function Dashboard() {
       >
         <Plus className="w-8 h-8 group-hover:rotate-90 transition-transform" />
       </button>
+
+      <DeleteConfirmationModal 
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setAppToCancel(null);
+        }}
+        onConfirm={confirmCancel}
+        title="Cancelar Cita"
+        message="¿Estás seguro de que deseas cancelar esta cita? El cliente recibirá una notificación y el espacio quedará libre."
+        itemText={appointments.find(a => a.id === appToCancel)?.clientName}
+      />
 
       {/* Manual Booking Modal */}
       <AnimatePresence>

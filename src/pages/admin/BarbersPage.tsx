@@ -1,22 +1,28 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, Trash2, Mail, Phone, MoreVertical, Plus, Clock, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Barber } from '../../types';
+import { Barber, Barbershop } from '../../types';
 import { useOutletContext } from 'react-router-dom';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
 
 export default function BarbersPage() {
-  const { searchQuery } = useOutletContext<{ searchQuery: string }>();
+  const { searchQuery, shop } = useOutletContext<{ searchQuery: string, shop: Barbershop | null }>();
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [barberToDelete, setBarberToDelete] = useState<string | null>(null);
   const [editingBarber, setEditingBarber] = useState<Barber | null>(null);
   const [formData, setFormData] = useState({ 
     name: '', 
     photo: '', 
     role: 'Barbero Senior',
     shiftStart: '09:00',
-    shiftEnd: '20:00'
+    shiftEnd: '20:00',
+    commission: 50 // Default commission
   });
+
+  const isPremium = shop?.plan === 'premium';
 
   useEffect(() => {
     fetchBarbers();
@@ -36,7 +42,8 @@ export default function BarbersPage() {
       photo: '', 
       role: 'Barbero Senior',
       shiftStart: '09:00',
-      shiftEnd: '20:00'
+      shiftEnd: '20:00',
+      commission: 50
     });
     setShowModal(true);
   };
@@ -48,7 +55,8 @@ export default function BarbersPage() {
       photo: barber.photo, 
       role: barber.role || 'Barbero Senior',
       shiftStart: barber.shiftStart || '09:00',
-      shiftEnd: barber.shiftEnd || '20:00'
+      shiftEnd: barber.shiftEnd || '20:00',
+      commission: barber.commission || 50
     });
     setShowModal(true);
   };
@@ -82,9 +90,15 @@ export default function BarbersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar a este barbero?')) return;
-    await fetch(`/api/admin/barbers/${id}`, { method: 'DELETE' });
+    setBarberToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!barberToDelete) return;
+    await fetch(`/api/admin/barbers/${barberToDelete}`, { method: 'DELETE' });
     fetchBarbers();
+    setBarberToDelete(null);
   };
 
   const filteredBarbers = barbers.filter(b => {
@@ -152,6 +166,18 @@ export default function BarbersPage() {
           </motion.div>
         ))}
       </div>
+
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setBarberToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Eliminar Barbero"
+        message="¿Estás seguro de que deseas eliminar a este barbero del equipo? Esta acción no se puede deshacer."
+        itemText={barbers.find(b => b.id === barberToDelete)?.name}
+      />
 
       {/* Modal - Add / Edit */}
       <AnimatePresence>
@@ -238,6 +264,24 @@ export default function BarbersPage() {
                     />
                   </div>
                 </div>
+
+                {isPremium && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Comisión (%)</label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        min="0"
+                        max="100"
+                        value={formData.commission}
+                        onChange={(e) => setFormData({ ...formData, commission: parseInt(e.target.value) })}
+                        className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all font-bold text-white"
+                        placeholder="50"
+                      />
+                      <span className="absolute right-6 top-1/2 -translate-y-1/2 text-white/40 font-black">%</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-4 pt-4">
                   <button 

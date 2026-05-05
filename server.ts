@@ -20,17 +20,22 @@ const INITIAL_DB = {
       address: 'Calle 123, Bogotá',
       phone: '+57 300 000 0000',
       logo: 'https://placehold.co/100x100?text=PZ',
+      plan: 'basic',
+      theme: {
+        primary: '#FFFFFF',
+        accent: '#000000'
+      },
       services: [
         { id: 's1', name: 'Corte de Cabello', price: 35000, duration: 45, icon: 'scissors' },
         { id: 's2', name: 'Tinte Completo', price: 120000, duration: 120, icon: 'palette' },
         { id: 's3', name: 'Manicure', price: 25000, duration: 30, icon: 'sparkles' },
       ],
       barbers: [
-        { id: 'b1', name: 'Felipe Zapata', photo: 'https://i.pravatar.cc/150?u=felipe' },
-        { id: 'b2', name: 'Santiago Giraldo', photo: 'https://i.pravatar.cc/150?u=santiago' },
-        { id: 'b3', name: 'Juan Guillermo', photo: 'https://i.pravatar.cc/150?u=juan' },
-        { id: 'b4', name: 'Mauricio Osorio', photo: 'https://i.pravatar.cc/150?u=mauricio' },
-        { id: 'b5', name: 'Manuel', photo: 'https://i.pravatar.cc/150?u=manuel' },
+        { id: 'b1', name: 'Felipe Zapata', photo: 'https://i.pravatar.cc/150?u=felipe', commission: 60 },
+        { id: 'b2', name: 'Santiago Giraldo', photo: 'https://i.pravatar.cc/150?u=santiago', commission: 50 },
+        { id: 'b3', name: 'Juan Guillermo', photo: 'https://i.pravatar.cc/150?u=juan', commission: 50 },
+        { id: 'b4', name: 'Mauricio Osorio', photo: 'https://i.pravatar.cc/150?u=mauricio', commission: 45 },
+        { id: 'b5', name: 'Manuel', photo: 'https://i.pravatar.cc/150?u=manuel', commission: 40 },
       ],
       hours: {
         monday: { open: '08:00', close: '20:00' },
@@ -61,7 +66,48 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.static('public'));
+
+  app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    const db = getDb();
+
+    if (username === 'admin') {
+      if (password === 'admin') {
+        db.shops[0].plan = 'basic';
+        saveDb(db);
+        return res.json({ success: true, plan: 'basic' });
+      } else if (password === 'adminpro') {
+        db.shops[0].plan = 'premium';
+        saveDb(db);
+        return res.json({ success: true, plan: 'premium' });
+      }
+    }
+
+    res.status(401).json({ error: 'Credenciales inválidas' });
+  });
+
+  // SUPER ADMIN ROUTES
+  app.get('/api/superadmin/shops', (req, res) => {
+    const db = getDb();
+    res.json(db.shops);
+  });
+
+  app.post('/api/superadmin/shops/:id/plan', (req, res) => {
+    const { id } = req.params;
+    const { plan } = req.body;
+    const db = getDb();
+    const shopIndex = db.shops.findIndex(s => s.id === id);
+    if (shopIndex !== -1) {
+      db.shops[shopIndex].plan = plan;
+      saveDb(db);
+      res.json({ success: true, shop: db.shops[shopIndex] });
+    } else {
+      res.status(404).json({ error: 'Shop not found' });
+    }
+  });
 
   // API ROUTES
   app.get('/api/shops/:slug', (req, res) => {
@@ -105,6 +151,19 @@ async function startServer() {
     db.shops[0].services.push(newService);
     saveDb(db);
     res.json(newService);
+  });
+
+  app.patch('/api/admin/services/:id', (req, res) => {
+    const { id } = req.params;
+    const db = getDb();
+    const serviceIndex = db.shops[0].services.findIndex((s: any) => s.id === id);
+    if (serviceIndex !== -1) {
+      db.shops[0].services[serviceIndex] = { ...db.shops[0].services[serviceIndex], ...req.body };
+      saveDb(db);
+      res.json(db.shops[0].services[serviceIndex]);
+    } else {
+      res.status(404).json({ error: 'Service not found' });
+    }
   });
 
   app.delete('/api/admin/services/:id', (req, res) => {

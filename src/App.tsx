@@ -5,17 +5,20 @@ import BarbersPage from './pages/admin/BarbersPage';
 import ServicesPage from './pages/admin/ServicesPage';
 import FinancesPage from './pages/admin/FinancesPage';
 import SettingsPage from './pages/admin/SettingsPage';
+import SubscriptionPage from './pages/admin/SubscriptionPage';
 import BookingPage from './pages/client/BookingPage';
-import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
 import AdminLayout from './layouts/AdminLayout';
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 
 export default function App() {
   return (
     <Router>
       <AnimatePresence mode="wait">
         <Routes>
-          {/* Public Landing */}
-          <Route path="/" element={<LandingPage />} />
+          {/* Admin Login as Root */}
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/superadmin" element={<SuperAdminDashboard />} />
 
           {/* Client Booking Route */}
           <Route path="/b/:slug" element={<BookingPage />} />
@@ -28,6 +31,7 @@ export default function App() {
             <Route path="servicios" element={<ServicesPage />} />
             <Route path="finanzas" element={<FinancesPage />} />
             <Route path="ajustes" element={<SettingsPage />} />
+            <Route path="suscripcion" element={<SubscriptionPage />} />
           </Route>
 
           {/* Fallback */}

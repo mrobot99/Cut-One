@@ -4,6 +4,7 @@ export interface Service {
   price: number;
   duration: number;
   icon: string;
+  image?: string;
 }
 
 export interface Barber {
@@ -13,6 +14,7 @@ export interface Barber {
   role?: string;
   shiftStart?: string;
   shiftEnd?: string;
+  commission?: number; // Added for Pro plan
 }
 
 export interface BusinessHours {
@@ -32,6 +34,11 @@ export interface Barbershop {
   barbers: Barber[];
   hours: Record<string, BusinessHours>;
   inactiveDates?: string[];
+  plan?: 'basic' | 'premium';
+  theme?: {
+    primary: string;
+    accent: string;
+  };
 }
 
 export interface Appointment {

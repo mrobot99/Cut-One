@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scissors, Trash2, Clock, DollarSign, Plus, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Service } from '../../types';
 import { useOutletContext } from 'react-router-dom';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
 
 export default function ServicesPage() {
   const { searchQuery } = useOutletContext<{ searchQuery: string }>();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newService, setNewService] = useState({ name: '', price: '', duration: '', icon: 'scissors' });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [newService, setNewService] = useState({ name: '', price: '', duration: '', icon: 'scissors', image: '' });
 
   useEffect(() => {
     fetchServices();
@@ -22,10 +26,24 @@ export default function ServicesPage() {
     setLoading(false);
   };
 
-  const handleAddService = async (e: React.FormEvent) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewService(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/services', {
-      method: 'POST',
+    const url = editingService ? `/api/admin/services/${editingService.id}` : '/api/admin/services';
+    const method = editingService ? 'PATCH' : 'POST';
+
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...newService,
@@ -36,14 +54,39 @@ export default function ServicesPage() {
     if (res.ok) {
       fetchServices();
       setShowModal(false);
+      setEditingService(null);
       setNewService({ name: '', price: '', duration: '', icon: 'scissors' });
     }
   };
 
+  const handleEdit = (service: Service) => {
+    setEditingService(service);
+    setNewService({ 
+      name: service.name, 
+      price: service.price.toString(), 
+      duration: service.duration.toString(), 
+      icon: service.icon,
+      image: service.image || ''
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingService(null);
+    setNewService({ name: '', price: '', duration: '', icon: 'scissors', image: '' });
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este servicio?')) return;
-    await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
+    setServiceToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!serviceToDelete) return;
+    await fetch(`/api/admin/services/${serviceToDelete}`, { method: 'DELETE' });
     fetchServices();
+    setServiceToDelete(null);
   };
 
   const filteredServices = services.filter(s => {
@@ -77,19 +120,35 @@ export default function ServicesPage() {
             key={service.id}
             className="bg-[#0D0D0D] border border-white/5 rounded-[40px] p-8 group hover:border-white/20 transition-all"
           >
-            <div className="flex justify-between items-start mb-8">
-              <div className="p-4 rounded-3xl bg-white/5 text-white/60 group-hover:bg-white group-hover:text-black transition-all">
-                <Scissors className="w-6 h-6" />
+            <div className="relative mb-8 h-48 -mx-8 -mt-8 overflow-hidden rounded-t-[40px]">
+              {service.image ? (
+                <img 
+                  src={service.image} 
+                  alt={service.name} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                />
+              ) : (
+                <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                  <Scissors className="w-12 h-12 text-white/10" />
+                </div>
+              )}
+              <div className="absolute top-6 left-6 flex gap-2">
+                <div className="p-3 rounded-2xl bg-black/60 backdrop-blur-md text-white border border-white/10">
+                  <Scissors className="w-5 h-5" />
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                  <Settings2 className="w-4 h-4 text-white/40" />
+              <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={() => handleEdit(service)}
+                  className="p-3 rounded-2xl bg-black/60 backdrop-blur-md hover:bg-white hover:text-black transition-all border border-white/10"
+                >
+                  <Settings2 className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => handleDelete(service.id)}
-                  className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                  className="p-3 rounded-2xl bg-red-500/20 backdrop-blur-md hover:bg-red-500 transition-all border border-red-500/20 text-red-500 hover:text-white"
                 >
-                  <Trash2 className="w-4 h-4 text-red-500/40" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -114,6 +173,18 @@ export default function ServicesPage() {
         ))}
       </div>
 
+      <DeleteConfirmationModal 
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setServiceToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Eliminar Servicio"
+        message="¿Estás seguro de que deseas eliminar este servicio del catálogo? Esta acción no se puede deshacer."
+        itemText={services.find(s => s.id === serviceToDelete)?.name}
+      />
+
       {/* Add Modal */}
       <AnimatePresence>
         {showModal && (
@@ -131,8 +202,31 @@ export default function ServicesPage() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative w-full max-w-lg bg-[#0D0D0D] border border-white/10 rounded-[40px] p-10 shadow-2xl"
             >
-              <h2 className="text-3xl font-black uppercase italic mb-8">Nuevo Servicio</h2>
-              <form onSubmit={handleAddService} className="space-y-6">
+              <h2 className="text-3xl font-black uppercase italic mb-8">
+                {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
+              </h2>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Foto del Servicio</label>
+                  <div className="flex items-center gap-6 p-6 bg-white/5 border border-white/5 rounded-3xl group/photo relative overflow-hidden">
+                    <div className="relative w-24 h-24 flex-shrink-0">
+                      <img 
+                        src={newService.image || 'https://via.placeholder.com/150'} 
+                        alt="Preview" 
+                        className="w-full h-full rounded-2xl object-cover border border-white/10"
+                      />
+                      <label className="absolute inset-0 bg-black/60 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-2xl">
+                        <Plus className="w-8 h-8 text-white" />
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      </label>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-white/60 mb-2">Haz clic para cargar una imagen</p>
+                      <p className="text-[9px] text-white/20 uppercase font-black tracking-widest">Formatos: JPG, PNG, WEBP</p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Nombre del Servicio</label>
                   <input 
@@ -140,10 +234,11 @@ export default function ServicesPage() {
                     type="text" 
                     value={newService.name}
                     onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                    className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all"
+                    className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all font-bold text-white"
                     placeholder="Ej. Corte y Barba"
                   />
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-2">Precio ($)</label>
@@ -152,7 +247,7 @@ export default function ServicesPage() {
                       type="number" 
                       value={newService.price}
                       onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                      className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all"
+                      className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all font-bold text-white"
                       placeholder="35000"
                     />
                   </div>
@@ -163,7 +258,7 @@ export default function ServicesPage() {
                       type="number" 
                       value={newService.duration}
                       onChange={(e) => setNewService({ ...newService, duration: e.target.value })}
-                      className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all"
+                      className="w-full bg-white/5 border border-white/5 rounded-2xl px-6 py-4 outline-none focus:border-white/20 transition-all font-bold text-white"
                       placeholder="45"
                     />
                   </div>
@@ -171,7 +266,7 @@ export default function ServicesPage() {
                 <div className="flex gap-4 pt-4">
                   <button 
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={closeModal}
                     className="flex-1 py-4 rounded-full border border-white/5 font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
                   >
                     Cancelar

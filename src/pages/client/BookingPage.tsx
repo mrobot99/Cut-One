@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Scissors, Clock, ArrowRight, CheckCircle2, ChevronRight, Search, Phone, User, Calendar as CalendarIcon, MessageCircle, RefreshCw } from 'lucide-react';
@@ -66,8 +66,18 @@ export default function BookingPage() {
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white font-black italic text-4xl animate-pulse">CUT ONE</div>;
   if (!shop) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Shop not found</div>;
 
+  const isPremium = shop.plan === 'premium';
+  const primaryColor = shop.theme?.primary || '#FFFFFF';
+  const accentColor = shop.theme?.accent || '#000000';
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white font-sans selection:bg-white selection:text-black">
+    <div 
+      className="min-h-screen bg-[#0A0A0A] text-white font-sans selection:bg-white selection:text-black"
+      style={{ 
+        '--shop-primary': primaryColor,
+        '--shop-accent': accentColor,
+      } as React.CSSProperties}
+    >
       {/* Hero Header */}
       <section className="relative h-[40vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-black/40 to-transparent z-10"></div>
@@ -168,10 +178,16 @@ export default function BookingPage() {
                       >
                         <div className="flex justify-between items-start mb-4">
                           <div className={cn(
-                            "p-3 rounded-2xl",
-                            selectedService?.id === service.id ? "bg-black/10" : "bg-white/5 group-hover:bg-white/10"
+                            "w-16 h-16 rounded-2xl overflow-hidden",
+                            selectedService?.id === service.id ? "border-2 border-black/20" : "bg-white/5"
                           )}>
-                            <Scissors className="w-6 h-6" />
+                            {service.image ? (
+                              <img src={service.image} className="w-full h-full object-cover" alt={service.name} />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center opacity-40">
+                                <Scissors className="w-6 h-6" />
+                              </div>
+                            )}
                           </div>
                           <span className="font-black text-xl">${service.price.toLocaleString()}</span>
                         </div>
@@ -255,8 +271,9 @@ export default function BookingPage() {
                  onClick={() => setSelectedDate(date)}
                  className={cn(
                    "flex-shrink-0 w-24 h-24 rounded-[24px] border flex flex-col items-center justify-center transition-all",
-                   isSelected ? "bg-white text-black border-white" : "bg-white/5 border-white/5 hover:border-white/20"
+                   isSelected ? "text-black border-white" : "bg-white/5 border-white/5 hover:border-white/20"
                  )}
+                 style={isSelected ? { backgroundColor: primaryColor, color: accentColor } : {}}
                >
                  <span className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">{format(date, 'EEE', { locale: es })}</span>
                  <span className="text-2xl font-black leading-none">{format(date, 'dd')}</span>
@@ -307,8 +324,9 @@ export default function BookingPage() {
                               onClick={() => setSelectedTime(time)}
                               className={cn(
                                 "py-3 rounded-xl border text-xs font-black transition-all",
-                                selectedTime === time ? "bg-white text-black border-white" : "bg-white/5 border-white/5 hover:border-white/20 text-white/60 hover:text-white"
+                                selectedTime === time ? "text-black border-white" : "bg-white/5 border-white/5 hover:border-white/20 text-white/60 hover:text-white"
                               )}
+                              style={selectedTime === time ? { backgroundColor: primaryColor, color: accentColor } : {}}
                             >
                               {time}
                             </button>
@@ -326,8 +344,9 @@ export default function BookingPage() {
                               onClick={() => setSelectedTime(time)}
                               className={cn(
                                 "py-3 rounded-xl border text-xs font-black transition-all",
-                                selectedTime === time ? "bg-white text-black border-white" : "bg-white/5 border-white/5 hover:border-white/20 text-white/60 hover:text-white"
+                                selectedTime === time ? "text-black border-white" : "bg-white/5 border-white/5 hover:border-white/20 text-white/60 hover:text-white"
                               )}
+                              style={selectedTime === time ? { backgroundColor: primaryColor, color: accentColor } : {}}
                             >
                               {time}
                             </button>
@@ -346,7 +365,8 @@ export default function BookingPage() {
                        initial={{ opacity: 0, y: 20 }}
                        animate={{ opacity: 1, y: 0 }}
                        onClick={() => setStep(3)}
-                       className="w-full py-5 rounded-full bg-white text-black font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 group shadow-xl"
+                       className="w-full py-5 rounded-full font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 group shadow-xl"
+                       style={{ backgroundColor: primaryColor, color: accentColor }}
                     >
                       Continuar <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                     </motion.button>
@@ -416,7 +436,8 @@ export default function BookingPage() {
                     <button 
                        disabled={!clientData.name || !clientData.phone || bookingStatus === 'loading'}
                        onClick={handleBooking}
-                       className="w-full py-6 rounded-full bg-white text-black font-black uppercase tracking-tighter text-xl disabled:opacity-20 transition-all active:scale-95 shadow-2xl flex items-center justify-center gap-3"
+                       className="w-full py-6 rounded-full font-black uppercase tracking-tighter text-xl disabled:opacity-20 transition-all active:scale-95 shadow-2xl flex items-center justify-center gap-3"
+                       style={{ backgroundColor: primaryColor, color: accentColor }}
                     >
                       {bookingStatus === 'loading' ? (
                         <RefreshCw className="w-6 h-6 animate-spin" />
@@ -434,11 +455,18 @@ export default function BookingPage() {
 
       {/* Modern Footer Branding */}
       <footer className="py-12 border-t border-white/5 flex flex-col items-center gap-4">
-         <div className="flex items-center gap-2 opacity-20">
-           <Scissors className="w-5 h-5" />
-           <span className="font-black uppercase tracking-widest">CUT ONE</span>
-         </div>
-         <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">&copy; 2026 Powered by Bukia SaaS</p>
+         {!isPremium ? (
+           <div className="flex items-center gap-2 opacity-20">
+             <Scissors className="w-5 h-5" />
+             <span className="font-black uppercase tracking-widest">CUT ONE</span>
+           </div>
+         ) : (
+           <div className="flex flex-col items-center gap-2 opacity-40">
+             <img src={shop.logo} className="w-8 h-8 rounded-lg grayscale" />
+             <span className="text-[10px] font-black uppercase tracking-widest">{shop.name}</span>
+           </div>
+         )}
+         <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">&copy; 2026 {isPremium ? shop.name : 'Powered by Bukia SaaS'}</p>
       </footer>
     </div>
   );
