@@ -20,10 +20,23 @@ export default function ServicesPage() {
   }, []);
 
   const fetchServices = async () => {
-    const res = await fetch('/api/admin/shop');
-    const data = await res.json();
-    setServices(data.services);
-    setLoading(false);
+    const shopId = localStorage.getItem('shopId');
+    if (!shopId) return;
+    
+    try {
+      const res = await fetch('/api/admin/shop', {
+        headers: { 'X-Shop-Id': shopId }
+      });
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+      const data = await res.json();
+      setServices(data.services);
+    } catch (err) {
+      console.error('Fetch error in Services:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,9 +55,13 @@ export default function ServicesPage() {
     const url = editingService ? `/api/admin/services/${editingService.id}` : '/api/admin/services';
     const method = editingService ? 'PATCH' : 'POST';
 
+    const shopId = localStorage.getItem('shopId');
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Shop-Id': shopId || ''
+      },
       body: JSON.stringify({
         ...newService,
         price: Number(newService.price),
@@ -83,8 +100,12 @@ export default function ServicesPage() {
   };
 
   const confirmDelete = async () => {
-    if (!serviceToDelete) return;
-    await fetch(`/api/admin/services/${serviceToDelete}`, { method: 'DELETE' });
+    const shopId = localStorage.getItem('shopId');
+    if (!serviceToDelete || !shopId) return;
+    await fetch(`/api/admin/services/${serviceToDelete}`, { 
+      method: 'DELETE',
+      headers: { 'X-Shop-Id': shopId }
+    });
     fetchServices();
     setServiceToDelete(null);
   };

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { Scissors, Calendar, Users, BarChart3, Settings, LogOut, Search, Bell, ExternalLink, Copy, Menu, X, CreditCard } from 'lucide-react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import React, { useState, useEffect } from 'react';
 import { Barbershop } from '../types';
@@ -16,14 +16,36 @@ const navItems = [
 
 export default function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [shop, setShop] = useState<Barbershop | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleLogout = () => {
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('shopId');
+    localStorage.removeItem('shopSlug');
+    localStorage.removeItem('shopPlan');
+    navigate('/');
+  };
+
   useEffect(() => {
-    fetch('/api/admin/shop')
-      .then(res => res.json())
-      .then(setShop);
+    const shopId = localStorage.getItem('shopId');
+    if (!shopId) return;
+
+    fetch('/api/admin/shop', {
+      headers: {
+        'X-Shop-Id': shopId
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+        const contentType = res.headers.get('content-type');
+        if (!contentType?.includes('application/json')) throw new Error('Response is not JSON');
+        return res.json();
+      })
+      .then(setShop)
+      .catch(err => console.error('Error fetching shop in layout:', err));
   }, []);
 
   useEffect(() => {
@@ -93,9 +115,12 @@ export default function AdminLayout() {
             </nav>
 
             <div className="p-8 border-t border-white/10">
-              <Link to="/" className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-sm">
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-sm w-full text-left"
+              >
                 <LogOut className="w-5 h-5" /> Salir del Panel
-              </Link>
+              </button>
             </div>
           </motion.div>
         )}
@@ -149,10 +174,13 @@ export default function AdminLayout() {
         </nav>
 
         <div className="p-4 border-t border-white/5">
-          <Link to="/" className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/50 hover:bg-red-500/10 hover:text-red-500 transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/50 hover:bg-red-500/10 hover:text-red-500 transition-colors text-left"
+          >
             <LogOut className="w-5 h-5" />
             <span>Cerrar Sesión</span>
-          </Link>
+          </button>
         </div>
       </aside>
 

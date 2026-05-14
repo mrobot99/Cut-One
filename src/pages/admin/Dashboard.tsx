@@ -26,21 +26,42 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     setLoading(true);
+    const shopId = localStorage.getItem('shopId');
+    if (!shopId) return;
+
     try {
       const [shopRes, appRes] = await Promise.all([
-        fetch('/api/admin/shop'),
-        fetch('/api/admin/appointments')
+        fetch('/api/admin/shop', { headers: { 'X-Shop-Id': shopId } }),
+        fetch('/api/admin/appointments', { headers: { 'X-Shop-Id': shopId } })
       ]);
+
+      if (!shopRes.ok || !appRes.ok) {
+        throw new Error(`API match error: ${shopRes.status} / ${appRes.status}`);
+      }
+
+      const shopContentType = shopRes.headers.get('content-type');
+      const appContentType = appRes.headers.get('content-type');
+
+      if (!shopContentType?.includes('application/json') || !appContentType?.includes('application/json')) {
+        throw new Error('Response is not JSON');
+      }
+
       const shopData = await shopRes.json();
       const appData = await appRes.json();
+      
       setShop(shopData);
       setAppointments(appData);
 
       // Set default service/barber for modal
-      if (shopData.services.length > 0) setNewApp(prev => ({ ...prev, serviceId: shopData.services[0].id }));
-      if (shopData.barbers.length > 0) setNewApp(prev => ({ ...prev, barberId: shopData.barbers[0].id }));
+      if (shopData.services && shopData.services.length > 0) {
+        setNewApp(prev => ({ 
+          ...prev, 
+          serviceId: shopData.services[0].id,
+          barberId: shopData.barbers && shopData.barbers.length > 0 ? shopData.barbers[0].id : prev.barberId
+        }));
+      }
     } catch (err) {
-      console.error(err);
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -48,11 +69,15 @@ export default function Dashboard() {
 
   const handleManualBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shop) return;
+    const shopId = localStorage.getItem('shopId');
+    if (!shop || !shopId) return;
     try {
       await fetch('/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Shop-Id': shopId 
+        },
         body: JSON.stringify({
           ...newApp,
           shopId: shop.id,
@@ -78,7 +103,10 @@ export default function Dashboard() {
     try {
       await fetch(`/api/admin/appointments/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Shop-Id': localStorage.getItem('shopId') || ''
+        },
         body: JSON.stringify({ status })
       });
       fetchData();
@@ -92,7 +120,10 @@ export default function Dashboard() {
     try {
       await fetch(`/api/admin/appointments/${appToCancel}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Shop-Id': localStorage.getItem('shopId') || ''
+        },
         body: JSON.stringify({ status: 'cancelled' })
       });
       fetchData();

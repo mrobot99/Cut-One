@@ -29,10 +29,23 @@ export default function BarbersPage() {
   }, []);
 
   const fetchBarbers = async () => {
-    const res = await fetch('/api/admin/shop');
-    const data = await res.json();
-    setBarbers(data.barbers);
-    setLoading(false);
+    const shopId = localStorage.getItem('shopId');
+    if (!shopId) return;
+
+    try {
+      const res = await fetch('/api/admin/shop', {
+        headers: { 'X-Shop-Id': shopId }
+      });
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+      const data = await res.json();
+      setBarbers(data.barbers);
+    } catch (err) {
+      console.error('Fetch error in Barbers:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenAdd = () => {
@@ -77,9 +90,13 @@ export default function BarbersPage() {
     const url = editingBarber ? `/api/admin/barbers/${editingBarber.id}` : '/api/admin/barbers';
     const method = editingBarber ? 'PATCH' : 'POST';
 
+    const shopId = localStorage.getItem('shopId');
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Shop-Id': shopId || ''
+      },
       body: JSON.stringify(formData)
     });
 
@@ -95,8 +112,12 @@ export default function BarbersPage() {
   };
 
   const confirmDelete = async () => {
-    if (!barberToDelete) return;
-    await fetch(`/api/admin/barbers/${barberToDelete}`, { method: 'DELETE' });
+    const shopId = localStorage.getItem('shopId');
+    if (!barberToDelete || !shopId) return;
+    await fetch(`/api/admin/barbers/${barberToDelete}`, { 
+      method: 'DELETE',
+      headers: { 'X-Shop-Id': shopId }
+    });
     fetchBarbers();
     setBarberToDelete(null);
   };

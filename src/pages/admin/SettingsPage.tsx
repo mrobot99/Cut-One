@@ -17,10 +17,22 @@ export default function SettingsPage() {
   const isPremium = shop?.plan === 'premium';
 
   useEffect(() => {
-    fetch('/api/admin/shop')
-      .then(res => res.json())
+    const shopId = localStorage.getItem('shopId');
+    if (!shopId) return;
+
+    fetch('/api/admin/shop', {
+      headers: { 'X-Shop-Id': shopId }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         setShop(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching settings:', err);
         setLoading(false);
       });
   }, []);
@@ -39,11 +51,15 @@ export default function SettingsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!shop) return;
+    const shopId = localStorage.getItem('shopId');
+    if (!shop || !shopId) return;
     setSaving(true);
     const res = await fetch('/api/admin/shop', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Shop-Id': shopId 
+      },
       body: JSON.stringify(shop)
     });
     if (res.ok) {

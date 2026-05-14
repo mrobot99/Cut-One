@@ -35,6 +35,8 @@ export interface Barbershop {
   hours: Record<string, BusinessHours>;
   inactiveDates?: string[];
   plan?: 'basic' | 'premium';
+  admin_username?: string;
+  admin_password?: string;
   theme?: {
     primary: string;
     accent: string;

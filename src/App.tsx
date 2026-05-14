@@ -10,6 +10,8 @@ import BookingPage from './pages/client/BookingPage';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './layouts/AdminLayout';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+import SuperAdminLoginPage from './pages/superadmin/SuperAdminLoginPage';
+import PricingPage from './pages/PricingPage';
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
         <Routes>
           {/* Admin Login as Root */}
           <Route path="/" element={<LoginPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/secret-hub" element={<SuperAdminLoginPage />} />
           <Route path="/superadmin" element={<SuperAdminDashboard />} />
 
           {/* Client Booking Route */}

@@ -65,15 +65,26 @@ export default function FinancesPage() {
   }, []);
 
   const fetchData = async () => {
+    const shopId = localStorage.getItem('shopId');
+    if (!shopId) return;
+
     try {
       const [shopRes, appRes] = await Promise.all([
-        fetch('/api/admin/shop'),
-        fetch('/api/admin/appointments')
+        fetch('/api/admin/shop', { headers: { 'X-Shop-Id': shopId } }),
+        fetch('/api/admin/appointments', { headers: { 'X-Shop-Id': shopId } })
       ]);
-      setShop(await shopRes.json());
-      setAppointments(await appRes.json());
+
+      if (!shopRes.ok || !appRes.ok) {
+        throw new Error(`API error: ${shopRes.status} / ${appRes.status}`);
+      }
+
+      const shopData = await shopRes.json();
+      const appData = await appRes.json();
+
+      setShop(shopData);
+      setAppointments(appData);
     } catch (err) {
-      console.error(err);
+      console.error('Fetch error in Finances:', err);
     } finally {
       setLoading(false);
     }

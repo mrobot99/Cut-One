@@ -260,8 +260,9 @@ export default function BookingPage() {
              const isSelected = isSameDay(selectedDate, date);
              const dateStr = format(date, 'yyyy-MM-dd');
              const isInactive = shop.inactiveDates?.includes(dateStr);
-             const dayName = format(date, 'eeee', { locale: es }).toLowerCase();
-             const isClosedDay = shop.hours[dayName]?.open === 'off';
+             const dayName = format(date, 'eeee').toLowerCase(); // Use English keys
+             const shopDayHours = shop.hours[dayName];
+             const isClosedDay = shopDayHours?.open === 'off';
 
              if (isInactive || isClosedDay) return null;
 
@@ -291,9 +292,11 @@ export default function BookingPage() {
              </h2>
              
              {(() => {
-               const dayName = format(selectedDate, 'eeee', { locale: es }).toLowerCase();
+               const dayName = format(selectedDate, 'eeee').toLowerCase(); // Use English keys
                const shopDayHours = shop.hours[dayName];
                
+               if (!shopDayHours) return <p className="text-center py-10 text-white/20 uppercase font-black tracking-widest italic">Horario no disponible</p>;
+
                // Use shop hours but constrained by barber shift
                const startStr = selectedBarber.shiftStart || shopDayHours.open;
                const endStr = selectedBarber.shiftEnd || shopDayHours.close;

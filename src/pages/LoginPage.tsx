@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Scissors, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Scissors, Lock, User, ArrowRight, Loader2, Shield } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -25,7 +25,18 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        // Successfully logged in (simulated)
+        const data = await res.json();
+        
+        if (data.role === 'superadmin') {
+          localStorage.setItem('isSuperAdmin', 'true');
+          navigate('/superadmin');
+          return;
+        }
+
+        localStorage.setItem('isAdmin', 'true');
+        localStorage.setItem('shopId', data.shopId);
+        localStorage.setItem('shopSlug', data.shopSlug);
+        localStorage.setItem('shopPlan', data.plan);
         navigate('/admin/agenda');
       } else {
         const data = await res.json();
@@ -137,22 +148,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-12 pt-8 border-t border-white/5 flex flex-col gap-4">
-            <div className="flex justify-between items-center group cursor-pointer" onClick={() => { setUsername('admin'); setPassword('admin'); }}>
-              <div className="space-y-0.5">
-                <p className="text-[8px] font-black uppercase tracking-widest text-white/20">Modo Demo Basic</p>
-                <p className="text-[10px] font-bold text-white/40 group-hover:text-white transition-colors">admin / admin</p>
-              </div>
-              <ArrowRight className="w-3 h-3 text-white/10 group-hover:text-white group-hover:translate-x-1 transition-all" />
-            </div>
-            <div className="flex justify-between items-center group cursor-pointer" onClick={() => { setUsername('admin'); setPassword('adminpro'); }}>
-              <div className="space-y-0.5">
-                <p className="text-[8px] font-black uppercase tracking-widest text-white/20">Modo Demo Premium</p>
-                <p className="text-[10px] font-bold text-white/40 group-hover:text-white transition-colors">admin / adminpro</p>
-              </div>
-              <ArrowRight className="w-3 h-3 text-white/10 group-hover:text-white group-hover:translate-x-1 transition-all" />
-            </div>
-          </div>
         </motion.div>
       </div>
     </div>
